@@ -42,6 +42,15 @@
 
 namespace bp = boost::python;
 
+// Internal GLog DANGEROUS function
+namespace google {
+    namespace base {
+        namespace internal {
+            void SetExitOnDFatal(bool value);
+        }  // namespace internal
+    }  // namespace base
+} // namespace google
+
 namespace caffe {
 
 // For Python, for now, we'll just always use float as the type.
@@ -78,6 +87,10 @@ static void CheckFile(const string& filename) {
       throw std::runtime_error("Could not open file " + filename);
     }
     f.close();
+}
+
+static void GlogFailureFunction() {
+  throw std::runtime_error("Fatal error in Caffe native code");
 }
 
 void CheckContiguousArray(PyArrayObject* arr, string name,
@@ -343,6 +356,15 @@ class NCCL {
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SolveOverloads, Solve, 0, 1);
 
 BOOST_PYTHON_MODULE(_caffe) {
+  // Google logging.
+  ::google::InitGoogleLogging("pycaffe");
+  // Provide a backtrace on segfault.
+  ::google::InstallFailureSignalHandler();
+
+  // Don't raise SIGABRT on failed CHECK_xxx calls
+  ::google::base::internal::SetExitOnDFatal(false);   // dangerous
+  ::google::InstallFailureFunction(GlogFailureFunction);
+
   // below, we prepend an underscore to methods that will be replaced
   // in Python
 
