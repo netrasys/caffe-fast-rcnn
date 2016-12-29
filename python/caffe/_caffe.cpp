@@ -90,6 +90,9 @@ static void CheckFile(const string& filename) {
 }
 
 static void GlogFailureFunction() {
+  // Reset CUDA error so subsequent runs will work
+  cudaGetLastError();
+
   throw std::runtime_error("Fatal error in Caffe native code");
 }
 
